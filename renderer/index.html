@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Meeting Assistant</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Titlebar (draggable) -->
+    <div id="titlebar">
+      <span id="logo">🤖 AI Assistant</span>
+      <div id="controls">
+        <span id="status-dot"></span>
+        <span id="status-label">Idle</span>
+        <button id="close-btn" title="Hide  (Alt+Shift+A to restore)">✕</button>
+      </div>
+    </div>
+
+    <!-- Audio mode tabs -->
+    <div id="mode-tabs">
+      <button class="tab active" data-mode="meeting">🎧 Meeting Audio</button>
+      <button class="tab"        data-mode="mic">🎤 My Mic</button>
+      <button class="tab"        data-mode="paste">📋 Paste</button>
+    </div>
+
+    <!-- Transcript (hidden in paste mode) -->
+    <div id="transcript-bar">
+      <span class="bar-label">HEARD</span>
+      <span id="transcript">—</span>
+    </div>
+
+    <!-- Paste input panel (shown only in paste mode) -->
+    <div id="paste-panel" class="hidden">
+      <textarea id="paste-input" placeholder="Paste or type your question… (Ctrl+Enter to send)"></textarea>
+    </div>
+
+    <!-- Response -->
+    <div id="response-area">
+      <div class="bar-label">CLAUDE</div>
+      <div id="response" class="muted">Response will appear here...</div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div id="bottom-bar">
+      <button id="listen-btn" class="btn-start">▶ Start</button>
+      <button id="clear-history-btn" title="Clear conversation history">🗑</button>
+      <button id="settings-btn" title="Settings">⚙</button>
+    </div>
+
+    <!-- Settings panel -->
+    <div id="settings-panel" class="hidden">
+      <div id="settings-header">
+        <span>Settings</span>
+        <button id="settings-close">✕</button>
+      </div>
+
+      <label>Anthropic API Key <span class="hint">(claude.ai)</span></label>
+      <div class="key-row">
+        <input type="password" id="apiKey" placeholder="sk-ant-api03-..." />
+        <button class="eye-btn" id="eyeBtn1">👁</button>
+      </div>
+
+      <label>Groq API Key <span class="hint">(for meeting audio transcription)</span></label>
+      <div class="key-row">
+        <input type="password" id="groqKey" placeholder="gsk_..." />
+        <button class="eye-btn" id="eyeBtn2">👁</button>
+      </div>
+
+      <label>System Prompt <span class="hint">(optional)</span></label>
+      <textarea id="systemPrompt" placeholder="You are a helpful meeting assistant..."></textarea>
+
+      <button id="save-btn">Save</button>
+      <div id="save-msg"></div>
+
+      <div id="groq-hint">
+        Get a free Groq key at <strong>console.groq.com</strong> — needed for meeting audio mode
+      </div>
+    </div>
+
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

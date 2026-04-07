@@ -1,0 +1,12 @@
+{
+  "name": "meeting-ai",
+  "version": "1.0.0",
+  "description": "Invisible AI meeting assistant - hidden from all screen capture",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^28.0.0"
+  }
+}
