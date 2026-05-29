@@ -13,41 +13,42 @@
     <div id="titlebar">
       <span id="logo">🤖 AI Assistant</span>
       <div id="controls">
+        <input type="range" id="opacity-slider" min="0.2" max="1" step="0.05" value="0.95" data-tip="Transparency" data-tip-below />
         <span id="status-dot"></span>
         <span id="status-label">Idle</span>
-        <button id="close-btn" title="Hide  (Alt+Shift+A to restore)">✕</button>
+        <button id="close-btn" data-tip="Hide (Alt+Shift+A to restore)" data-tip-below>✕</button>
       </div>
     </div>
 
     <!-- Audio mode tabs -->
     <div id="mode-tabs">
-      <button class="tab active" data-mode="meeting">🎧 Meeting Audio</button>
+      <button class="tab active" data-mode="meeting">🎧 Meeting</button>
       <button class="tab"        data-mode="mic">🎤 My Mic</button>
-      <button class="tab"        data-mode="paste">📋 Paste</button>
     </div>
 
-    <!-- Transcript (hidden in paste mode) -->
-    <div id="transcript-bar">
-      <span class="bar-label">HEARD</span>
-      <span id="transcript">—</span>
-    </div>
-
-    <!-- Paste input panel (shown only in paste mode) -->
-    <div id="paste-panel" class="hidden">
-      <textarea id="paste-input" placeholder="Paste or type your question… (Ctrl+Enter to send)"></textarea>
-    </div>
-
-    <!-- Response -->
+    <!-- Claude response -->
     <div id="response-area">
       <div class="bar-label">CLAUDE</div>
       <div id="response" class="muted">Response will appear here...</div>
     </div>
 
+    <!-- Custom prompt override (optional — empty = default) -->
+    <div id="prompt-area">
+      <input id="custom-prompt" type="text" placeholder="Custom prompt (optional — leave empty for default interview prompt)" />
+    </div>
+
+    <!-- Editable input area — speech appends here, user can type/edit -->
+    <div id="input-area">
+      <textarea id="input-textarea" placeholder="Captured speech appears here… type or paste to add. Ctrl+Enter to send."></textarea>
+    </div>
+
     <!-- Bottom bar -->
     <div id="bottom-bar">
-      <button id="listen-btn" class="btn-start">▶ Start</button>
-      <button id="clear-history-btn" title="Clear conversation history">🗑</button>
-      <button id="settings-btn" title="Settings">⚙</button>
+      <button id="capture-btn" class="btn-start">▶ Start</button>
+      <button id="mic-btn"     class="btn-icon"  data-tip="Toggle your mic">🎙</button>
+      <button id="send-btn"    class="btn-send"  data-tip="Send to Claude (Ctrl+Enter)">↑ Send</button>
+      <button id="clear-history-btn" class="btn-icon" data-tip="Clear history">🗑</button>
+      <button id="settings-btn"      class="btn-icon" data-tip="Settings">⚙</button>
     </div>
 
     <!-- Settings panel -->
@@ -69,8 +70,23 @@
         <button class="eye-btn" id="eyeBtn2">👁</button>
       </div>
 
-      <label>System Prompt <span class="hint">(optional)</span></label>
-      <textarea id="systemPrompt" placeholder="You are a helpful meeting assistant..."></textarea>
+      <label>Transcription Engine</label>
+      <div class="engine-toggle">
+        <span class="engine-label" id="lbl-groq">Groq API</span>
+        <label class="switch">
+          <input type="checkbox" id="useLocalWhisper" />
+          <span class="slider"></span>
+        </label>
+        <span class="engine-label" id="lbl-local">Local Whisper</span>
+      </div>
+      <div id="local-whisper-hint" class="hidden">
+        <strong>Setup:</strong> Download <code>whisper-server.exe</code> + <code>ggml-base.en.bin</code> from
+        <strong>github.com/ggml-org/whisper.cpp</strong>, then run:<br/>
+        <code>whisper-server.exe --model ggml-base.en.bin --port 2022</code>
+      </div>
+
+      <label>System Prompt <span class="hint">(optional — overrides default)</span></label>
+      <textarea id="systemPrompt" placeholder="Default: Expert interview assistant. Use /code or CODE: prefix for structured code answers with approach, line-by-line explanation, and complexity analysis."></textarea>
 
       <button id="save-btn">Save</button>
       <div id="save-msg"></div>
@@ -79,6 +95,9 @@
         Get a free Groq key at <strong>console.groq.com</strong> — needed for meeting audio mode
       </div>
     </div>
+
+    <!-- Fake cursor — rendered inside protected surface, invisible on share -->
+    <div id="fake-cursor"></div>
 
   </div>
   <script src="app.js"></script>

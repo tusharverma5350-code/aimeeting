@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"/d/Coding Only/MeetingAI\" log --all --pretty=format:\"%h %s\")",
+      "Bash(ls node_modules/.bin/electron*)",
+      "WebSearch",
+      "PowerShell(npm run *)",
+      "PowerShell(Remove-Item *)"
+    ]
+  }
+}

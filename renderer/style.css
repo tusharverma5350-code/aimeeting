@@ -37,12 +37,61 @@ html, body {
   -webkit-backdrop-filter: blur(16px);
 }
 
+/* ── Utility ── */
+.hidden { display: none !important; }
+
+/* ── Custom tooltips (replace OS tooltips to keep pixels protected) ── */
+[data-tip] { position: relative; }
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1c2128;
+  color: var(--text);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  font-size: 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10000;
+}
+[data-tip-below]:hover::after {
+  top: calc(100% + 6px);
+  bottom: auto;
+}
+
+/* ── Cursor strategy ──
+   1. Hide real OS cursor while inside app → Chromium calls SetCursor(NULL),
+      so CURSORINFO.hCursor is NULL → sharing apps have nothing to composite.
+   2. Draw a fake cursor as a DOM node inside the content-protected surface →
+      user sees it locally, but it's stripped from the share feed. */
+#app, #app * { cursor: none !important; }
+
+#fake-cursor {
+  position: fixed;
+  top: 0; left: 0;
+  width: 0; height: 0;
+  pointer-events: none;
+  z-index: 99999;
+  display: none;
+  /* Windows-style arrow made of two triangles */
+  border-left:  10px solid transparent;
+  border-top:   14px solid #ffffff;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.7));
+  will-change: transform;
+  transform: translate(0, 0);
+}
+#fake-cursor.visible { display: block; }
+
 /* ── Titlebar ── */
 #titlebar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 7px 12px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -62,6 +111,19 @@ html, body {
 #status-dot.red    { background: var(--red); }
 #status-label { font-size: 11px; color: var(--muted); }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+/* Opacity slider */
+#opacity-slider {
+  -webkit-appearance: none;
+  width: 56px; height: 3px;
+  background: var(--border); border-radius: 2px; outline: none; cursor: pointer;
+}
+#opacity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--blue); cursor: pointer;
+}
+
 #close-btn {
   background: transparent; border: none; color: var(--dim);
   font-size: 14px; cursor: pointer; padding: 2px 5px; border-radius: 4px; line-height: 1;
@@ -86,21 +148,13 @@ html, body {
 .tab:hover { color: var(--text); }
 .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
 
-/* ── Transcript bar ── */
-#transcript-bar {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 12px;
-  background: var(--surface); border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.bar-label { font-size: 9px; font-weight: 700; color: var(--dim); letter-spacing: 1px; flex-shrink: 0; }
-#transcript { font-size: 12px; color: var(--muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-
 /* ── Response area ── */
 #response-area {
   flex: 1; padding: 10px 12px;
   display: flex; flex-direction: column; gap: 4px; overflow: hidden;
+  min-height: 80px;
 }
+.bar-label { font-size: 9px; font-weight: 700; color: var(--dim); letter-spacing: 1px; flex-shrink: 0; }
 #response {
   flex: 1; font-size: 13px; color: var(--text); line-height: 1.65;
   overflow-y: auto; white-space: pre-wrap; word-break: break-word;
@@ -111,50 +165,93 @@ html, body {
 #response::-webkit-scrollbar { width: 4px; }
 #response::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-/* ── Utility ── */
-.hidden { display: none !important; }
-
-/* ── Paste panel ── */
-#paste-panel {
-  padding: 8px 12px;
+/* ── Custom prompt area ── */
+#prompt-area {
+  padding: 6px 12px 0;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
+  -webkit-app-region: no-drag;
 }
-#paste-input {
-  width: 100%; height: 68px; resize: none;
-  background: #0d1117; border: 1px solid var(--border);
-  border-radius: 6px; color: var(--text);
-  font-size: 12px; line-height: 1.55;
-  padding: 7px 10px; outline: none;
-  font-family: inherit; transition: border-color 0.2s;
+#custom-prompt {
+  width: 100%;
+  padding: 6px 10px;
+  background: #0d1117;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 11px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
   user-select: text;
 }
-#paste-input:focus { border-color: var(--blue); }
-#paste-input::placeholder { color: var(--dim); }
+#custom-prompt:focus { border-color: var(--blue); }
+#custom-prompt::placeholder { color: var(--dim); font-style: italic; }
+
+/* ── Input area ── */
+#input-area {
+  padding: 8px 12px;
+  background: var(--surface);
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+#input-textarea {
+  width: 100%; height: 72px; resize: none;
+  background: #0d1117; border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text);
+  font-size: 12px; line-height: 1.55; padding: 7px 10px;
+  outline: none; font-family: inherit;
+  transition: border-color 0.2s;
+  user-select: text;
+}
+#input-textarea:focus { border-color: var(--blue); }
+#input-textarea::placeholder { color: var(--dim); font-style: italic; }
+#input-textarea::-webkit-scrollbar { width: 3px; }
+#input-textarea::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
 /* ── Bottom bar ── */
 #bottom-bar {
-  display: flex; gap: 8px; padding: 8px 12px;
+  display: flex; gap: 6px; padding: 8px 12px;
   background: var(--surface); border-top: 1px solid var(--border);
   flex-shrink: 0; -webkit-app-region: no-drag;
 }
-#listen-btn {
-  flex: 1; padding: 9px; border: none; border-radius: 7px;
+#capture-btn {
+  flex: 1; padding: 8px; border: none; border-radius: 7px;
   font-size: 12px; font-weight: 700; cursor: pointer;
   transition: background 0.2s, transform 0.1s; color: #fff;
 }
-#listen-btn.btn-start { background: #238636; }
-#listen-btn.btn-start:hover { background: #2ea043; }
-#listen-btn.btn-stop  { background: #b62324; }
-#listen-btn.btn-stop:hover  { background: #d92330; }
-#listen-btn:active { transform: scale(0.97); }
-#clear-history-btn, #settings-btn {
-  width: 36px; height: 36px;
-  background: var(--border); border: none; border-radius: 7px;
-  color: var(--muted); font-size: 16px; cursor: pointer; transition: background 0.2s;
+#capture-btn.btn-start { background: #238636; }
+#capture-btn.btn-start:hover { background: #2ea043; }
+#capture-btn.btn-stop  { background: #b62324; }
+#capture-btn.btn-stop:hover  { background: #d92330; }
+#capture-btn:active { transform: scale(0.97); }
+
+#send-btn {
+  padding: 8px 12px; border: none; border-radius: 7px;
+  background: var(--blue); color: #fff;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: background 0.2s, transform 0.1s; flex-shrink: 0;
 }
-#clear-history-btn:hover, #settings-btn:hover { background: #3d444e; color: var(--text); }
+#send-btn:hover { background: #79b8ff; }
+#send-btn:active { transform: scale(0.97); }
+#send-btn:disabled { background: var(--dim); cursor: not-allowed; }
+#send-btn.btn-stop-response { background: #b62324; }
+#send-btn.btn-stop-response:hover { background: #d92330; }
+
+.btn-icon {
+  width: 34px; height: 34px;
+  background: var(--border); border: none; border-radius: 7px;
+  color: var(--muted); font-size: 15px; cursor: pointer;
+  transition: background 0.2s; flex-shrink: 0;
+}
+.btn-icon:hover { background: #3d444e; color: var(--text); }
+#mic-btn.active {
+  background: #1f3a28; color: var(--green);
+  box-shadow: 0 0 0 1px var(--green);
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse { 0%,100%{ box-shadow: 0 0 0 1px var(--green); } 50%{ box-shadow: 0 0 0 3px #3fb95055; } }
 
 /* ── Settings panel ── */
 #settings-panel {
@@ -202,6 +299,44 @@ textarea { height: 52px; resize: none; }
 }
 #save-btn:hover { background: #2ea043; }
 #save-msg { font-size: 11px; min-height: 16px; }
+/* ── Transcription engine toggle ── */
+.engine-toggle {
+  display: flex; align-items: center; gap: 8px;
+}
+.engine-label { font-size: 11px; color: var(--muted); }
+#lbl-groq  { color: var(--blue); }
+#lbl-local { color: var(--muted); }
+input#useLocalWhisper:checked ~ .slider { background: var(--green); }
+/* highlight active side */
+#useLocalWhisper:not(:checked) + .slider + * { color: var(--muted); }
+
+.switch { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute; inset: 0; cursor: pointer;
+  background: var(--border); border-radius: 20px;
+  transition: background 0.2s;
+}
+.slider::before {
+  content: ''; position: absolute;
+  width: 14px; height: 14px; border-radius: 50%;
+  left: 3px; bottom: 3px; background: #fff;
+  transition: transform 0.2s;
+}
+.switch input:checked + .slider { background: var(--green); }
+.switch input:checked + .slider::before { transform: translateX(16px); }
+
+#local-whisper-hint {
+  font-size: 10px; color: var(--dim); line-height: 1.6;
+  padding: 6px 8px; background: #161b22; border-radius: 6px;
+  border: 1px solid var(--border);
+}
+#local-whisper-hint strong { color: var(--muted); }
+#local-whisper-hint code {
+  background: #0d1117; padding: 1px 4px; border-radius: 3px;
+  color: var(--blue); font-size: 9px;
+}
+
 #groq-hint {
   font-size: 10px; color: var(--dim); line-height: 1.5;
   padding: 6px 8px; background: #161b22; border-radius: 6px;
