@@ -35,6 +35,7 @@
     <!-- Custom prompt override (optional — empty = default) -->
     <div id="prompt-area">
       <input id="custom-prompt" type="text" placeholder="Custom prompt (optional — leave empty for default interview prompt)" />
+      <span id="prompt-status">using default prompt</span>
     </div>
 
     <!-- Editable input area — speech appends here, user can type/edit -->
@@ -46,6 +47,7 @@
     <div id="bottom-bar">
       <button id="capture-btn" class="btn-start">▶ Start</button>
       <button id="mic-btn"     class="btn-icon"  data-tip="Toggle your mic">🎙</button>
+      <button id="screenshot-btn" class="btn-icon" data-tip="Screenshot screen & analyze">📸</button>
       <button id="send-btn"    class="btn-send"  data-tip="Send to Claude (Ctrl+Enter)">↑ Send</button>
       <button id="clear-history-btn" class="btn-icon" data-tip="Clear history">🗑</button>
       <button id="settings-btn"      class="btn-icon" data-tip="Settings">⚙</button>
@@ -58,10 +60,42 @@
         <button id="settings-close">✕</button>
       </div>
 
-      <label>Anthropic API Key <span class="hint">(claude.ai)</span></label>
+      <label>Anthropic API Key <span class="hint">(console.anthropic.com — needs credits)</span></label>
       <div class="key-row">
         <input type="password" id="apiKey" placeholder="sk-ant-api03-..." />
         <button class="eye-btn" id="eyeBtn1">👁</button>
+      </div>
+
+      <label>Answer Engine</label>
+      <select id="answerEngine">
+        <option value="ollama">Local Ollama — free, offline</option>
+        <option value="claude">Claude — Anthropic (needs key + credits)</option>
+        <option value="openai">ChatGPT — OpenAI (key built in)</option>
+      </select>
+      <div id="claude-hint" class="hidden">
+        Claude answers use the model below + the Anthropic API key above.
+        Requires credits at <strong>console.anthropic.com</strong>.
+      </div>
+
+      <div id="claude-model-row" class="hidden">
+        <label>Claude Model</label>
+        <select id="claudeModel">
+          <option value="claude-opus-4-8">Opus 4.8 — best quality (~$0.05/answer)</option>
+          <option value="claude-sonnet-5">Sonnet 5 — balanced, faster (~$0.03)</option>
+          <option value="claude-haiku-4-5">Haiku 4.5 — fastest &amp; cheapest (~$0.01)</option>
+        </select>
+      </div>
+
+      <div id="openai-model-row" class="hidden">
+        <label>OpenAI Model</label>
+        <select id="openaiModel">
+          <option value="gpt-5.5">GPT-5.5 — best for complex/DSA coding ($5 in / $30 out per 1M)</option>
+          <option value="gpt-5.4">GPT-5.4 — strong coding, cheaper ($2.50 in / $15 out per 1M)</option>
+          <option value="gpt-5.4-mini">GPT-5.4 mini — fast coding model, low cost</option>
+          <option value="gpt-4o">GPT-4o — balanced, fast (general Q&amp;A)</option>
+          <option value="gpt-4o-mini">GPT-4o mini — fastest &amp; cheapest</option>
+          <option value="gpt-4-turbo">GPT-4 Turbo — legacy, highest quality</option>
+        </select>
       </div>
 
       <label>Groq API Key <span class="hint">(for meeting audio transcription)</span></label>
@@ -84,6 +118,9 @@
         <strong>github.com/ggml-org/whisper.cpp</strong>, then run:<br/>
         <code>whisper-server.exe --model ggml-base.en.bin --port 2022</code>
       </div>
+
+      <label>📱 Phone Remote <span class="hint">(open this on your phone, same Wi-Fi — type &amp; send)</span></label>
+      <div id="phone-url" class="phone-url">starting…</div>
 
       <label>System Prompt <span class="hint">(optional — overrides default)</span></label>
       <textarea id="systemPrompt" placeholder="Default: Expert interview assistant. Use /code or CODE: prefix for structured code answers with approach, line-by-line explanation, and complexity analysis."></textarea>

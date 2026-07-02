@@ -157,13 +157,45 @@ html, body {
 .bar-label { font-size: 9px; font-weight: 700; color: var(--dim); letter-spacing: 1px; flex-shrink: 0; }
 #response {
   flex: 1; font-size: 13px; color: var(--text); line-height: 1.65;
-  overflow-y: auto; white-space: pre-wrap; word-break: break-word;
+  overflow-y: auto; word-break: break-word;
   user-select: text;
 }
 #response.muted { color: var(--muted); font-style: italic; }
 #response.error { color: var(--red); }
 #response::-webkit-scrollbar { width: 4px; }
 #response::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* ── Rendered Markdown inside the response panel ── */
+#response p { margin: 0 0 9px; }
+#response p:last-child { margin-bottom: 0; }
+#response .md-h {
+  font-weight: 700; color: var(--blue);
+  margin: 12px 0 6px; line-height: 1.4;
+}
+#response .md-h:first-child { margin-top: 0; }
+#response .md-h1 { font-size: 15px; }
+#response .md-h2 { font-size: 14px; }
+#response .md-h3 { font-size: 13px; color: var(--text); }
+#response .md-h4 { font-size: 12.5px; color: var(--muted); }
+#response hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+#response ul { margin: 2px 0 10px 18px; padding: 0; }
+#response li { margin: 3px 0; }
+#response code {
+  background: #21262d; color: #ffa657; padding: 1px 5px; border-radius: 4px;
+  font-family: Consolas, 'SFMono-Regular', monospace; font-size: 12px;
+}
+#response pre.md-code {
+  background: #0d1117; border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; margin: 8px 0; overflow-x: auto;
+}
+#response pre.md-code code {
+  background: none; padding: 0; color: #c9d1d9;
+  font-family: Consolas, 'SFMono-Regular', monospace;
+  font-size: 12px; line-height: 1.55; display: block;
+  white-space: pre; word-break: normal;
+}
+#response strong { color: var(--text); font-weight: 700; }
+#response em { color: var(--muted); }
 
 /* ── Custom prompt area ── */
 #prompt-area {
@@ -188,6 +220,11 @@ html, body {
 }
 #custom-prompt:focus { border-color: var(--blue); }
 #custom-prompt::placeholder { color: var(--dim); font-style: italic; }
+#prompt-status {
+  display: block; font-size: 10px; color: var(--dim);
+  margin: 3px 2px 4px; letter-spacing: 0.2px;
+}
+#prompt-status.active { color: var(--green); font-weight: 600; }
 
 /* ── Input area ── */
 #input-area {
@@ -287,6 +324,7 @@ input[type="password"], input[type="text"], textarea {
 }
 input:focus, textarea:focus { border-color: var(--blue); }
 textarea { height: 52px; resize: none; }
+#systemPrompt { height: 150px; resize: vertical; line-height: 1.5; }
 .eye-btn {
   background: #21262d; border: 1px solid var(--border);
   border-radius: 6px; color: var(--muted); cursor: pointer;
@@ -335,6 +373,24 @@ input#useLocalWhisper:checked ~ .slider { background: var(--green); }
 #local-whisper-hint code {
   background: #0d1117; padding: 1px 4px; border-radius: 3px;
   color: var(--blue); font-size: 9px;
+}
+#claude-hint {
+  font-size: 10px; color: var(--dim); line-height: 1.6;
+  padding: 6px 8px; background: #161b22; border-radius: 6px;
+  border: 1px solid var(--border);
+}
+#claude-hint strong { color: var(--muted); }
+#claude-model-row, #openai-model-row { margin-top: 8px; }
+#claudeModel, #openaiModel, #answerEngine {
+  width: 100%; padding: 8px 10px; border-radius: 6px; margin-top: 4px;
+  background: #161b22; color: var(--text); border: 1px solid var(--border);
+  font-size: 13px; cursor: pointer;
+}
+#claudeModel:focus, #openaiModel:focus, #answerEngine:focus { outline: none; border-color: var(--blue); }
+.phone-url {
+  font-family: monospace; font-size: 14px; color: var(--blue);
+  background: #161b22; border: 1px solid var(--border);
+  border-radius: 6px; padding: 9px 11px; word-break: break-all; user-select: all;
 }
 
 #groq-hint {

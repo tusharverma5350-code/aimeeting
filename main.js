@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, globalShortcut, screen, shell, desktopCapturer } = require('electron');
 const path = require('path');
 const os   = require('os');
+const http = require('http');
 
 // Fix "Unable to move the cache: Access is denied" on Windows —
 // redirect Chromium's cache to a writable temp location before app is ready.
@@ -11,6 +12,108 @@ app.commandLine.appendSwitch('enable-features', 'WebRtcAllowInputVolumeAdjustmen
 app.commandLine.appendSwitch('auto-select-desktop-capture-source', 'Entire screen');
 
 let win;
+
+// Only one instance may own the global shortcuts (Alt+Shift+A/D) — Windows
+// grants a hotkey to whichever process registers it first, so a second
+// launch would silently fail to get the hotkey while its window sits on top.
+// Refuse the second launch entirely and focus the existing window instead.
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (!win) return;
+    win.show();
+    win.focus();
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  PHONE REMOTE INPUT — a tiny LAN web server so you can type from your phone
+//  (same Wi-Fi) and have it land in the app's input box. No PIN/QR by design
+//  (single user); anyone on the LAN who knows the URL could post — fine at home.
+// ══════════════════════════════════════════════════════════════════════════════
+const PHONE_PORT = 8390;
+let phoneServer = null;
+
+function getLanIp() {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const n of nets[name] || []) {
+      if (n.family === 'IPv4' && !n.internal) return n.address;
+    }
+  }
+  return '127.0.0.1';
+}
+function phoneUrl() { return `http://${getLanIp()}:${PHONE_PORT}`; }
+
+const PHONE_PAGE = `<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>MeetingAI Remote</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#0d1117;color:#e6edf3;padding:14px}
+  h1{font-size:15px;margin:0 0 10px;color:#58a6ff;font-weight:700}
+  textarea{width:100%;height:44vh;resize:none;font-size:17px;line-height:1.5;padding:12px;border-radius:12px;border:1px solid #30363d;background:#161b22;color:#e6edf3}
+  textarea:focus{outline:none;border-color:#58a6ff}
+  .row{display:flex;gap:10px;margin-top:12px}
+  button{flex:1;padding:16px;font-size:16px;font-weight:700;border:none;border-radius:12px;color:#fff}
+  #send{background:#238636}#ins{background:#1f6feb}#clr{flex:0 0 70px;background:#30363d}
+  button:active{filter:brightness(1.25)}
+  #status{text-align:center;margin-top:12px;height:20px;font-size:14px;color:#7ee787}
+</style></head><body>
+  <h1>📱 MeetingAI — Remote Input</h1>
+  <textarea id="t" autofocus placeholder="Type your question here, then tap Send to AI…"></textarea>
+  <div class="row">
+    <button id="send">Send to AI</button>
+    <button id="ins">Insert</button>
+    <button id="clr">Clear</button>
+  </div>
+  <div id="status"></div>
+<script>
+  var t=document.getElementById('t'),s=document.getElementById('status');
+  function flash(m,ok){s.style.color=ok?'#7ee787':'#f85149';s.textContent=m;setTimeout(function(){s.textContent='';},2000);}
+  function post(send){
+    var text=t.value;
+    if(send&&!text.trim())return;
+    fetch('/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text,send:send})})
+      .then(function(r){if(!r.ok)throw 0;flash(send?'✓ Sent to AI':'✓ Inserted',true);if(send)t.value='';t.focus();})
+      .catch(function(){flash('⚠️ Not connected — check Wi-Fi',false);});
+  }
+  document.getElementById('send').onclick=function(){post(true);};
+  document.getElementById('ins').onclick=function(){post(false);};
+  document.getElementById('clr').onclick=function(){t.value='';t.focus();};
+</script></body></html>`;
+
+function startPhoneServer() {
+  if (phoneServer) return;
+  phoneServer = http.createServer((req, res) => {
+    if (req.method === 'GET' && (req.url === '/' || req.url.startsWith('/index'))) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      return res.end(PHONE_PAGE);
+    }
+    if (req.method === 'POST' && req.url === '/send') {
+      let body = '';
+      req.on('data', c => { body += c; if (body.length > 1e6) req.destroy(); });
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body || '{}');
+          const text = typeof data.text === 'string' ? data.text : '';
+          const send = !!data.send;
+          if (win && !win.isDestroyed()) win.webContents.send('phone-input', { text, send });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end('{"ok":true}');
+        } catch (_) { res.writeHead(400); res.end('bad request'); }
+      });
+      return;
+    }
+    res.writeHead(404); res.end('not found');
+  });
+  phoneServer.on('error', e => console.error('[phone] server error:', e.message));
+  phoneServer.listen(PHONE_PORT, '0.0.0.0', () => console.log(`[phone] remote input → ${phoneUrl()}`));
+}
 
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -53,25 +156,38 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
-  createWindow();
+if (gotLock) {
+  app.whenReady().then(() => {
+    createWindow();
+    startPhoneServer();
 
-  // Global hotkey: Alt+Shift+A → show/hide window
-  globalShortcut.register('Alt+Shift+A', () => {
-    if (!win) return;
-    if (win.isVisible()) {
-      win.hide();
-    } else {
-      win.show();
-      win.focus();
-    }
+    // Global hotkey: Alt+Shift+A → show/hide window
+    const okA = globalShortcut.register('Alt+Shift+A', () => {
+      if (!win) return;
+      if (win.isVisible()) {
+        win.hide();
+      } else {
+        win.show();
+        win.focus();
+      }
+    });
+    if (!okA) console.error('[shortcut] Alt+Shift+A registration FAILED — likely already bound by another app.');
+
+    // Global hotkey: Alt+Shift+D → toggle DevTools (to view the [llm] logs / errors)
+    const okD = globalShortcut.register('Alt+Shift+D', () => {
+      if (!win) return;
+      if (win.webContents.isDevToolsOpened()) win.webContents.closeDevTools();
+      else win.webContents.openDevTools({ mode: 'detach' });
+    });
+    if (!okD) console.error('[shortcut] Alt+Shift+D registration FAILED.');
   });
-});
+}
 
 // ── IPC: window controls from renderer ───────────────────────────────────────
 ipcMain.on('close-window',  () => win?.hide());
 ipcMain.on('set-opacity',   (_, val) => win?.setOpacity(Math.min(1, Math.max(0.1, val))));
 ipcMain.handle('get-platform', () => process.platform);
+ipcMain.handle('phone:url', () => phoneUrl());
 
 // Keyboard-driven resize (resizable:false disables native drag-resize).
 // Anchor the bottom-right corner so the window grows/shrinks from the top-left —
@@ -101,8 +217,44 @@ ipcMain.handle('get-desktop-sources', async () => {
   return sources.map(s => ({ id: s.id, name: s.name }));
 });
 
+// ── IPC: full-screen screenshot → returned as a JPEG data URL for AI vision ───
+// Hides our (content-protected) overlay first so the region behind it is captured,
+// then restores it. Captures what's on screen even when the shared app blocks copy.
+ipcMain.handle('capture-screenshot', async () => {
+  const t0 = Date.now();
+  const wasVisible = win?.isVisible();
+  try {
+    if (wasVisible) win.hide();
+    await new Promise(r => setTimeout(r, 150)); // let the desktop repaint without the overlay
+    const tHidden = Date.now();
+    const display = screen.getPrimaryDisplay();
+    const sf = display.scaleFactor || 1;
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: {
+        width:  Math.round(display.size.width  * sf),
+        height: Math.round(display.size.height * sf),
+      },
+    });
+    const tSources = Date.now();
+    const src = sources.find(s => String(s.display_id) === String(display.id)) || sources[0];
+    if (!src) throw new Error('No screen available to capture.');
+    let img = src.thumbnail;
+    const orig = img.getSize();
+    const MAX_W = 1600;                        // cap width → smaller payload, still readable
+    if (img.getSize().width > MAX_W) img = img.resize({ width: MAX_W });
+    const jpeg = img.toJPEG(82);
+    const tDone = Date.now();
+    console.log(`[screenshot/main] hide+repaint ${tHidden - t0}ms · getSources ${tSources - tHidden}ms · resize+encode ${tDone - tSources}ms · ${orig.width}x${orig.height}→${img.getSize().width}px · ${Math.round(jpeg.length / 1024)} KB`);
+    return 'data:image/jpeg;base64,' + jpeg.toString('base64');
+  } finally {
+    if (wasVisible && win) win.show();
+  }
+});
+
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  try { phoneServer?.close(); } catch (_) {}
 });
 
 // Keep app running when all windows closed (Windows/Linux)
