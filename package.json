@@ -18,6 +18,7 @@
     "appId": "com.meetingai.app",
     "productName": "MeetingAI",
     "asar": true,
+    "compression": "store",
     "files": [
       "main.js",
       "preload.js",

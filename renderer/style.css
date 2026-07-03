@@ -112,16 +112,16 @@ html, body {
 #status-label { font-size: 11px; color: var(--muted); }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
 
-/* Opacity slider */
+/* Opacity slider — cursor stays hidden (fake-cursor system), never the native pointer */
 #opacity-slider {
   -webkit-appearance: none;
   width: 56px; height: 3px;
-  background: var(--border); border-radius: 2px; outline: none; cursor: pointer;
+  background: var(--border); border-radius: 2px; outline: none; cursor: none !important;
 }
 #opacity-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 10px; height: 10px; border-radius: 50%;
-  background: var(--blue); cursor: pointer;
+  background: var(--blue); cursor: none !important;
 }
 
 #close-btn {
