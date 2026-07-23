@@ -180,6 +180,27 @@ if (gotLock) {
       else win.webContents.openDevTools({ mode: 'detach' });
     });
     if (!okD) console.error('[shortcut] Alt+Shift+D registration FAILED.');
+
+    // Global hotkey: Alt+Shift+M → toggle the 🎙 mic, without needing to click
+    // into this window (works while focus is on Zoom, an editor, etc.)
+    const okM = globalShortcut.register('Alt+Shift+M', () => {
+      if (win && !win.isDestroyed()) win.webContents.send('toggle-mic');
+    });
+    if (!okM) console.error('[shortcut] Alt+Shift+M registration FAILED — likely already bound by another app.');
+
+    // Global hotkey: Alt+Shift+N → toggle Start/Stop meeting capture button,
+    // without needing to click into this window.
+    const okN = globalShortcut.register('Alt+Shift+N', () => {
+      if (win && !win.isDestroyed()) win.webContents.send('toggle-capture');
+    });
+    if (!okN) console.error('[shortcut] Alt+Shift+N registration FAILED — likely already bound by another app.');
+
+    // Global hotkey: Alt+Shift+B → toggle which system prompt is active
+    // (System/Settings prompt ⇄ Custom-prompt box), shown live in the UI badge.
+    const okB = globalShortcut.register('Alt+Shift+B', () => {
+      if (win && !win.isDestroyed()) win.webContents.send('toggle-prompt-mode');
+    });
+    if (!okB) console.error('[shortcut] Alt+Shift+B registration FAILED — likely already bound by another app.');
   });
 }
 

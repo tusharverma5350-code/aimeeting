@@ -5,7 +5,22 @@
       "Bash(ls node_modules/.bin/electron*)",
       "WebSearch",
       "PowerShell(npm run *)",
-      "PowerShell(Remove-Item *)"
+      "PowerShell(Remove-Item *)",
+      "Bash(git checkout *)",
+      "Bash(rm -rf server website keys license-manager.js SETUP_PAYMENTS.md)",
+      "PowerShell(foreach \\($p in 4242,5500\\) { $c = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { $c.OwningProcess | Select-Object -Unique | ForEach-Object { try { Stop-Process -Id $_ -Force -ErrorAction Stop; \"Stopped PID $_ on port $p\" } catch { \"Could not stop PID $_ on port $p\" } } } else { \"Nothing listening on $p\" } })",
+      "Bash(tasklist //FI \"IMAGENAME eq electron.exe\")",
+      "Bash(taskkill //IM electron.exe //F)",
+      "Bash(node --check main.js)",
+      "Bash(xargs echo \"instances killed:\")",
+      "Bash(node --check preload.js)",
+      "Bash(node --check renderer/app.js)",
+      "Bash(tasklist)",
+      "Bash(git check-ignore *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }
